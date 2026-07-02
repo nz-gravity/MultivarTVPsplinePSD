@@ -31,7 +31,6 @@ def tv_psd_model(
     lam_t: jnp.ndarray,
     lam_f: jnp.ndarray,
     p: int,
-    eta: float = 1.0,
     tau0: float = 1e-4,
     alpha_phi: float = 2.0,
     beta_phi: float = 1.0,
@@ -46,7 +45,6 @@ def tv_psd_model(
         BUt, BUf: whitened basis matrices (nt, Kt), (nf, Kf).
         lam_t, lam_f: penalty eigenvalues.
         p: Number of channels.
-        eta: Safe-Bayes likelihood tempering in (0, 1].
         tau0: Fixed weak precision for the penalty null space.
         alpha_phi, beta_phi: Gamma hyperprior on the smoothing precisions.
     """
@@ -78,7 +76,7 @@ def tv_psd_model(
     # eigenvectors nu (Eq. 20 of the stationary paper, per tile).
     resid = jnp.sum(jnp.abs(u - theta @ u) ** 2, axis=-1)  # (nt, nf, p)
     loglik = jnp.sum(-dof * log_delta2 - resid / (Tb * jnp.exp(log_delta2)))
-    numpyro.factor("whittle", eta * loglik)
+    numpyro.factor("whittle", loglik)
 
 
 def spectral_matrix(surfaces: np.ndarray, p: int) -> np.ndarray:
@@ -135,7 +133,6 @@ def fit(
     kt: int = 10,
     kf: int = 10,
     degree: int = 3,
-    eta: float = 1.0,
     num_warmup: int = 500,
     num_samples: int = 500,
     num_chains: int = 1,
@@ -151,7 +148,6 @@ def fit(
         navg_t, navg_f: Local-averaging window (time x frequency tiles).
         kt, kf: Basis dimensions in time and frequency.
         degree: B-spline degree.
-        eta: Safe-Bayes tempering.
         num_warmup, num_samples, num_chains, seed: NUTS settings.
         **model_kwargs: Passed through to tv_psd_model (tau0, alpha_phi, ...).
 
@@ -185,7 +181,6 @@ def fit(
         lam_t=jnp.asarray(lam_t),
         lam_f=jnp.asarray(lam_f),
         p=p,
-        eta=eta,
         **model_kwargs,
     )
     return TVPSDResult(mcmc=mcmc, times=t_c, freqs=f_c, p=p)

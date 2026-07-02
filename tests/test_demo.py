@@ -79,6 +79,11 @@ def test_recovers_time_varying_spectral_matrix():
     rise = np.sum(np.abs(s_med - s_true) ** 2) / np.sum(np.abs(s_true) ** 2)
     assert rise < 0.25, f"RISE={rise:.3f}"
 
+    # The mixing is real, so Im S_21 = 0: the free Im(theta_21) surface must
+    # shrink to zero, not hallucinate structure.
+    im_scale = np.max(np.abs(s_med[..., 1, 0].imag)) / np.max(np.abs(s_true[..., 1, 0]))
+    assert im_scale < 0.1, f"spurious Im S_21 at {im_scale:.3f} of cross-spectrum scale"
+
     # The recovered cross-spectrum must track the sign flip of c(u) over time
     # (a stationary model cannot). Since S_21 = c(u) S_11, the ratio
     # Re S_21 / S_11 estimates c(u) directly; average over frequency.
